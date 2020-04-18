@@ -140,6 +140,7 @@ namespace Catan.Proxy
         public string Request { get => _request.Url; set => request = value; }
         public Guid ID { get; set; } = Guid.NewGuid(); // this gives us an ID at creation time that survives serialization and is globally unique
         public CatanError Error { get; set; } = CatanError.Unknown;
+        public string Version { get; set; } = "1.03"; // try not to forget updating this...
         public CatanResult() // for the Serializer
         {
 

@@ -2,6 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Description>github.com/joelong01/CatanProxy: a REST proxy with shared types between github.com/joelong01/Catan and github.joelong01/CatanService</Description>
+    <Copyright>LongShot Softare LLC</Copyright>
+    <PackageProjectUrl>https://github.com/joelong01/CatanProxy</PackageProjectUrl>
+    <PackageLicenseExpression></PackageLicenseExpression>
+    <Authors>Joe Long</Authors>
+    <Company>LongShot Software</Company>
+    <PackageReleaseNotes>for amusement only.  NOT FOR COMMERCIAL USE.</PackageReleaseNotes>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Version>1.0.3</Version>
+    <FileVersion>1.0.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

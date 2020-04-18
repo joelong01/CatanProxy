@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+publishproxy.bat
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

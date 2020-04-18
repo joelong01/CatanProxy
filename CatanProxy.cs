@@ -93,6 +93,16 @@ namespace Catan.Proxy
             return Get<PlayerResources>(url);
         }
 
+        public Task<PlayerResources> GetAllGameInfo(string gameName)
+        {
+            if (String.IsNullOrEmpty(gameName))
+            {
+                throw new Exception("names can't be null or empty");
+            }
+            string url = $"{HostName}/api/catan/game/gamedata/{gameName}";
+            return Get<PlayerResources>(url);
+        }
+
 
 
         public Task<PlayerResources> DevCardPurchase(string gameName, string playerName)
@@ -204,6 +214,13 @@ namespace Catan.Proxy
 
             return Delete<CatanResult>(url);
 
+
+        }
+        public Task<CatanResult> DeleteAllGames()
+        {
+
+            string url = $"{HostName}/api/catan/game/all";
+            return Delete<CatanResult>(url);
 
         }
 
@@ -491,17 +508,13 @@ namespace Catan.Proxy
                 }
                 else
                 {
-                    LastErrorString = await response.Content.ReadAsStringAsync();
+                    LastErrorString = json;
                     try
                     {
-                        LastError = CatanProxy.Deserialize<CatanResult>(LastErrorString);
-                        return default;
+                        LastError = ParseCatanResult(json);
                     }
-                    catch
-                    {
-                        return default;
-                    }
-
+                    catch { }                    
+                    return default;                    
                 }
             }
             catch (Exception e)
