@@ -93,14 +93,14 @@ namespace Catan.Proxy
             return Get<PlayerResources>(url);
         }
 
-        public Task<PlayerResources> GetAllGameInfo(string gameName)
+        public Task<object> GetGameData(string gameName)
         {
             if (String.IsNullOrEmpty(gameName))
             {
                 throw new Exception("names can't be null or empty");
             }
             string url = $"{HostName}/api/catan/game/gamedata/{gameName}";
-            return Get<PlayerResources>(url);
+            return Get<object>(url);
         }
 
 
@@ -216,10 +216,10 @@ namespace Catan.Proxy
 
 
         }
-        public Task<CatanResult> DeleteAllGames()
+        public Task<CatanResult> DeleteAllTestGames()
         {
 
-            string url = $"{HostName}/api/catan/game/all";
+            string url = $"{HostName}/api/catan/game/alltestgames";
             return Delete<CatanResult>(url);
 
         }

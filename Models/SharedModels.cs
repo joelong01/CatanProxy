@@ -7,6 +7,7 @@ using System;
 
 namespace Catan.Proxy
 {
+     public enum GameType { Test, Normal};
     public enum TileOrientation { FaceDown, FaceUp, None };
     public enum HarborType { Sheep, Wood, Ore, Wheat, Brick, ThreeForOne, Uninitialized, None };
     public enum CatanGameNames { Regular, Expansion, Seafarers, FourIslands };
@@ -49,6 +50,7 @@ namespace Catan.Proxy
         public int RoadBuilding { get; set; } = 2;
         public int Monopoly { get; set; } = 2;
         public CatanGameNames GameName { get; set; } = CatanGameNames.Regular;
+        public GameType GameType { get; set; } = GameType.Normal;
         public GameInfo() { }
         public GameInfo(GameInfo info)
         {
@@ -140,7 +142,7 @@ namespace Catan.Proxy
         public string Request { get => _request.Url; set => request = value; }
         public Guid ID { get; set; } = Guid.NewGuid(); // this gives us an ID at creation time that survives serialization and is globally unique
         public CatanError Error { get; set; } = CatanError.Unknown;
-        public string Version { get; set; } = "1.03"; // try not to forget updating this...
+        public string Version { get; set; } = "1.05"; // try not to forget updating this...
         public CatanResult() // for the Serializer
         {
 
