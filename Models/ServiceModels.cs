@@ -4,16 +4,6 @@ using System.Collections.Generic;
 
 namespace Catan.Proxy
 {
-    /// <summary>
-    ///     This enum tells us what the data shape is 
-    /// </summary>
-    public enum ServiceLogType
-    {
-        Undefined, Resource, Game, Purchase,
-        Trade, TakeCard, MeritimeTrade,
-        UpdateTurn,
-        Monopoly
-    }
     public enum CatanError
     {
         DevCardsSoldOut,
@@ -35,21 +25,7 @@ namespace Catan.Proxy
         Unexpected,
         NoError,
     }
-    /// <summary>
-    ///     this enum tells us what the data was used for. We often have data shapes for only one reason...
-    /// </summary>
-    public enum ServiceAction
-    {
-        Undefined, Purchased, PlayerAdded, UserRemoved, GameCreated, GameDeleted,
-        TradeGold, GrantResources, TradeResources, TakeCard, Refund, MeritimeTrade, UpdatedTurn,
-        LostToMonopoly,
-        PlayedMonopoly,
-        PlayedRoadBuilding,
-        PlayedKnight,
-        PlayedYearOfPlenty,
-        ReturnResources,
-        GameStarted
-    }
+
     /// <summary>
     ///     returned by Monitor.  
     ///         Sequence number used to ensure that no records are missed at the client
@@ -69,53 +45,32 @@ namespace Catan.Proxy
 
 
 
-    public class ServiceLogRecord
-    {
-        public int Sequence { get; set; }
-        public Guid LogId { get; set; } = Guid.NewGuid();
-        public ServiceLogType LogType { get; set; } = ServiceLogType.Undefined;
-        public ServiceAction Action { get; set; } = ServiceAction.Undefined;
-        public string PlayerName { get; set; }
-        public string RequestUrl { get; set; }
-        public CatanRequest UndoRequest { get; set; } = null; // the request to undo this action
-        public override string ToString()
-        {
-            return $"[LogType={LogType}][Player={PlayerName}][Action={Action}][Url={RequestUrl}]";
-        }
 
-    }
-    public class ResourceLog : ServiceLogRecord
+
+
+    public class ResourceLog : LogHeader
     {
+        
         public PlayerResources PlayerResources { get; set; } // this is not needed for Undo, but is needed for each of the games to update their UI
         public TradeResources TradeResource { get; set; } // needed for Undo
 
-        public ResourceLog() { LogType = ServiceLogType.Resource; }
         public override string ToString()
         {
             return base.ToString() + PlayerResources.ToString();
         }
     }
 
-    public class MonopolyLog : ResourceLog
-    {
-        public ResourceType ResourceType { get; set; }
-        public int Count { get; set; } = 0;
-        public MonopolyLog() { }
-        public override string ToString()
-        {
-            return base.ToString() + $"[ResourceType={ResourceType}]";
-        }
-    }
 
-    public class TurnLog : ServiceLogRecord
+
+    public class TurnLog : LogHeader
     {
         public string NewPlayer { get; set; } = "";
-        public TurnLog() { LogType = ServiceLogType.UpdateTurn; Action = ServiceAction.UpdatedTurn; }
+        public TurnLog() { Action = CatanAction.ChangedPlayer; }
     }
 
-    public class TradeLog : ServiceLogRecord
+    public class TradeLog : LogHeader
     {
-        public TradeLog() { LogType = ServiceLogType.Trade; }
+        public TradeLog() { Action = CatanAction.TradeResources; }
         public TradeResources FromTrade { get; set; }
         public TradeResources ToTrade { get; set; }
         public PlayerResources FromResources { get; set; }
@@ -125,9 +80,9 @@ namespace Catan.Proxy
         public string ToName { get; set; }
 
     }
-    public class TakeLog : ServiceLogRecord
+    public class TakeLog : LogHeader
     {
-        public TakeLog() { LogType = ServiceLogType.TakeCard; }
+        public TakeLog() { Action = CatanAction.CardTaken; }
         public ResourceType Taken { get; set; }
         public PlayerResources FromResources { get; set; }
         public PlayerResources ToResources { get; set; }
@@ -138,27 +93,50 @@ namespace Catan.Proxy
     }
 
 
-    public class MeritimeTradeLog : ServiceLogRecord
+    public class MeritimeTradeLog : LogHeader
     {
-        public MeritimeTradeLog() { LogType = ServiceLogType.MeritimeTrade; Action = ServiceAction.MeritimeTrade; }
+        public MeritimeTradeLog() { Action = CatanAction.MeritimeTrade; }
         public ResourceType Traded { get; set; }
         public int Cost { get; set; }
         public PlayerResources Resources { get; set; }
 
     }
-    public class PurchaseLog : ServiceLogRecord
+    public class PurchaseLog : LogHeader
     {
         public Entitlement Entitlement { get; set; }
         public PlayerResources PlayerResources { get; set; }
-        public PurchaseLog() { LogType = ServiceLogType.Purchase; }
+        public PurchaseLog() { Action = CatanAction.Purchased; }
         public override string ToString()
         {
             return $"[Entitlement={Entitlement}]" + base.ToString();
         }
     }
-    public class GameLog : ServiceLogRecord
+    public class GameLog : LogHeader
     {
         public ICollection<string> Players { get; set; }
-        public GameLog() { LogType = ServiceLogType.Game; }
+        public GameInfo GameInfo { get; set; }
+        public GameLog() { }
+    }
+
+    public class RandomBoardLog : LogHeader
+    {
+        public object RandomBoardSettings { get; set; } = null;
+        public RandomBoardLog()
+        {
+            Action = CatanAction.RandomizeBoard;
+
+        }
+    }
+
+    public class StateChangeLog : LogHeader
+    {
+        public object LogStateTranstion { get; set; } = null;
+
+        public StateChangeLog()
+        {
+
+            Action = CatanAction.ChangedState;
+        }
+
     }
 }

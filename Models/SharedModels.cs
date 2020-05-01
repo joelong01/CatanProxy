@@ -7,21 +7,7 @@ using System;
 
 namespace Catan.Proxy
 {
-     public enum GameType { Test, Normal};
-    public enum TileOrientation { FaceDown, FaceUp, None };
-    public enum HarborType { Sheep, Wood, Ore, Wheat, Brick, ThreeForOne, Uninitialized, None };
-    public enum CatanGameNames { Regular, Expansion, Seafarers, FourIslands };
-    public enum Entitlement { Undefined, DevCard, Settlement, City, Road }
-
-    public enum ResourceType { Sheep, Wood, Ore, Wheat, Brick, GoldMine, Desert, Back, None, Sea };
-    public enum DevCardType { Knight, VictoryPoint, YearOfPlenty, RoadBuilding, Monopoly, Unknown };
-    public enum BodyType
-    {
-        TradeResources,
-        None,
-        GameInfo,
-        TradeResourcesList
-    }
+   
     public class CatanRequest
     {
         public string Url { get; set; } = "";
@@ -35,8 +21,6 @@ namespace Catan.Proxy
         }
     }
 
-
-
     public class GameInfo
     {
         public int MaxRoads { get; set; } = 15;
@@ -49,7 +33,10 @@ namespace Catan.Proxy
         public int YearOfPlenty { get; set; } = 2;
         public int RoadBuilding { get; set; } = 2;
         public int Monopoly { get; set; } = 2;
-        public CatanGameNames GameName { get; set; } = CatanGameNames.Regular;
+        public int HarborCount { get; set; } = 9; // for "Regular Game"
+        public int TileCount { get; set; } = 19; // for "Regular Game"
+        public RandomBoardSettings BoardSettings { get; set; } = new RandomBoardSettings();
+        public CatanGames GameName { get; set; } = CatanGames.Regular;
         public GameType GameType { get; set; } = GameType.Normal;
         public GameInfo() { }
         public GameInfo(GameInfo info)
@@ -139,15 +126,16 @@ namespace Catan.Proxy
         public string FunctionName { get; set; }
         public string FilePath { get; set; }
         public int LineNumber { get; set; }
+        public DateTime Time { get; set; } = DateTime.Now;
         public string Request { get => _request.Url; set => request = value; }
         public Guid ID { get; set; } = Guid.NewGuid(); // this gives us an ID at creation time that survives serialization and is globally unique
         public CatanError Error { get; set; } = CatanError.Unknown;
-        public string Version { get; set; } = "1.05"; // try not to forget updating this...
+        public string Version { get; set; } = CatanProxy.ProxyVersion;
         public CatanResult() // for the Serializer
         {
 
         }
-
+       
         public CatanResult(CatanError error, [CallerMemberName] string fName = "", [CallerFilePath] string codeFile = "", [CallerLineNumber] int lineNumber = -1)
         {
             Error = error;
@@ -219,21 +207,6 @@ namespace Catan.Proxy
     }
 
 
-    public class DevelopmentCard : IEquatable<DevelopmentCard>
-    {
-        public DevCardType DevCard { get; set; } = DevCardType.Unknown;
-        public bool Played { get; set; } = false;
-
-        public bool Equals(DevelopmentCard other)
-        {
-            return (DevCard == other.DevCard && Played == other.Played);
-        }
-
-        public override string ToString()
-        {
-            return $"{DevCard} - [Played={Played}]";
-        }
-    }
 
     public class TradeResources : INotifyPropertyChanged
     {
@@ -414,14 +387,24 @@ namespace Catan.Proxy
         public int Cities { get; set; } = 0;
         public int Roads { get; set; } = 0;
 
-        public List<DevelopmentCard> DevCards { get; set; } = new List<DevelopmentCard>();
+        /// <summary>
+        ///     Unplayed Dev cards. Private information.
+        /// </summary>
+        public int Knights { get; set; } = 0; // # of knights that have NOT been played
+        public int VictoryPoints { get; set; } = 0;
+        public int YearOfPlenty { get; set; } = 0;
+        public int RoadBuilding { get; set; } = 0;
+        public int Monopoly { get; set; } = 0;
+        [JsonIgnore]
+        public int UnplayedDevCards => Knights + VictoryPoints + YearOfPlenty + RoadBuilding + Monopoly;
+        public List<DevCardType> PlayedDevCards { get; set; } = new List<DevCardType>();  // the list of cards that have been played.  this is public information!
 
 
         [JsonIgnore]
         public int TotalResources => Wheat + Wood + Brick + Ore + Sheep + GoldMine;
         public override string ToString()
         {
-            return $"[Total={TotalResources}][Ore={Ore}][Brick={Brick}][Wheat={Wheat}][Wood={Wood}][Sheep={Sheep}] [DevCards={DevCards?.Count}][Stuff={Settlements + Roads + Cities}]";
+            return $"[Total={TotalResources}][Ore={Ore}][Brick={Brick}][Wheat={Wheat}][Wood={Wood}][Sheep={Sheep}] [DevCards={PlayedDevCards?.Count}][Stuff={Settlements + Roads + Cities}]";
         }
         public PlayerResources() { }
 
@@ -465,9 +448,9 @@ namespace Catan.Proxy
         }
         public bool Equivalent(PlayerResources pr)
         {
-            if (pr.DevCards == null)
+            if (pr.PlayedDevCards == null)
             {
-                if (this.DevCards != null)
+                if (this.PlayedDevCards != null)
                 {
                     return false;
                 }
@@ -483,15 +466,15 @@ namespace Catan.Proxy
 
             }
 
-            if (pr.DevCards != null)
+            if (pr.PlayedDevCards != null)
             {
-                if (pr.DevCards.Count != this.DevCards.Count)
+                if (pr.PlayedDevCards.Count != this.PlayedDevCards.Count)
                 {
                     return false;
                 }
-                for (int i = 0; i < DevCards.Count; i++)
+                for (int i = 0; i < PlayedDevCards.Count; i++)
                 {
-                    if (!pr.DevCards[i].Equals(DevCards[i]))
+                    if (!pr.PlayedDevCards[i].Equals(PlayedDevCards[i]))
                         return false;
                 }
             }
@@ -502,6 +485,111 @@ namespace Catan.Proxy
 
 
         }
+    }
+
+    public class RandomLists
+    {
+        public List<int> TileList { get; set; } = null;
+        public List<int> NumberList { get; set; } = null;
+
+        public RandomLists() { }
+        public RandomLists(string saved)
+        {
+            Deserialize(saved);
+        }
+
+        public RandomLists(List<int> tiles, List<int> numbers)
+        {
+            TileList = tiles;
+            NumberList = numbers;
+        }
+
+
+        public string Serialize()
+        {
+            return CatanProxy.Serialize<RandomLists>(this);
+        }
+
+        public static RandomLists Deserialize(string saved)
+        {
+            return CatanProxy.Deserialize<RandomLists>(saved);
+
+        }
+
+
+    }
+    public class RandomBoardSettings
+    {
+        //
+        // every TileGroup has a list that says where to put the tiles
+        // and another list that says what number to put on the tiles
+        //
+        // the int here is the TileGroup Index - System.Text.Json currently only Deserializes Dictionaries keyed by strings.
+        //
+        public Dictionary<string, RandomLists> TileGroupToRandomListsDictionary { get; set; } = new Dictionary<string, RandomLists>();
+
+        //
+        //  every Board has a random list of harbors
+        public List<int> RandomHarborTypeList { get; set; } = null;
+        public RandomBoardSettings() { }
+
+        public override string ToString()
+        {
+            return Serialize();
+        }
+
+        public RandomBoardSettings(Dictionary<string, RandomLists> Tiles, List<int> Harbors)
+        {
+            RandomHarborTypeList = Harbors;
+            TileGroupToRandomListsDictionary = Tiles;
+        }
+
+        public string Serialize()
+        {
+            return CatanProxy.Serialize<RandomBoardSettings>(this);
+        }
+
+        public static RandomBoardSettings Deserialize(string saved)
+        {
+            return CatanProxy.Deserialize<RandomBoardSettings>(saved);
+
+        }
+
+
+
+    }
+
+    public class LogStateTranstion
+    {
+        public GameState OldState { get; set; } = GameState.Uninitialized;
+        public GameState NewState { get; set; } = GameState.Uninitialized;
+        public List<int> RandomGoldTiles { get; set; } = new List<int>();
+
+        public LogStateTranstion() { }
+
+        public LogStateTranstion(GameState old, GameState newState)
+        {
+            OldState = old;
+            NewState = newState;
+
+        }
+
+        public LogStateTranstion(string saved)
+        {
+            Deserialize(saved);
+        }
+
+        public override string ToString()
+        {
+            return CatanProxy.Serialize(this);
+
+        }
+
+        public static LogStateTranstion Deserialize(string json)
+        {
+            return CatanProxy.Deserialize<LogStateTranstion>(json);
+        }
+
     }
 
 }

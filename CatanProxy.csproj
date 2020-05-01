@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -10,9 +10,9 @@
     <Authors>Joe Long</Authors>
     <Company>LongShot Software</Company>
     <PackageReleaseNotes>for amusement only.  NOT FOR COMMERCIAL USE.</PackageReleaseNotes>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <Version>1.0.4</Version>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <Version>1.0.9</Version>
+    <FileVersion>1.0.0.1</FileVersion>
   </PropertyGroup>
 <Target Name="NugetPackAutoVersioning" AfterTargets="Build">
     <Exec Command="dotnet pack -p:PackageVersion=$([System.DateTime]::Now.ToString(&quot;yyyy.MM.dd.HHmmss&quot;)) --no-build --configuration $(Configuration) --output &quot;$(SolutionDir)nuget" />
@@ -20,6 +20,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>bin/Nuget</OutputPath>    
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="nuget\**" />
+    <EmbeddedResource Remove="nuget\**" />
+    <None Remove="nuget\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="4.7.1" />
