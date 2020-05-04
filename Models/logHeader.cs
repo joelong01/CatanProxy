@@ -46,7 +46,8 @@ namespace Catan.Proxy
         MeritimeTrade,
         GameCreated,
         Undefined,
-        TradeResources
+        TradeResources,
+        PlayedKnight
     };
 
 
