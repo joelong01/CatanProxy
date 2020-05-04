@@ -57,6 +57,8 @@ namespace Catan.Proxy
                     response = await Client.PostAsync(url, new StringContent("", Encoding.UTF8, "application/json"));
                 }
 
+                if (typeof(T) == typeof(void)) return default;
+                
                 json = await response.Content.ReadAsStringAsync();
                 if (response.IsSuccessStatusCode)
                 {
@@ -187,13 +189,13 @@ namespace Catan.Proxy
             List<LogHeader> records = new List<LogHeader>();
             foreach (var unparsedObject in serviceLogCollection.LogRecords)
             {
-                var logRecord = ParseLogRecord(unparsedObject);
+                var logRecord = ParseLogRecord((JsonElement)(object)unparsedObject);
                 records.Add(logRecord);
             }
             return records;
         }
 
-        private LogHeader ParseLogRecord(object unparsedObject)
+        private LogHeader ParseLogRecord(JsonElement unparsedObject)
         {
             string action = ((JsonElement)unparsedObject).GetProperty("action").GetString();
             if (String.IsNullOrEmpty(action)) return null;

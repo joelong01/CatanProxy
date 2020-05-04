@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Catan.Proxy
@@ -63,12 +64,28 @@ namespace Catan.Proxy
         string RequestUrl { get; set; }
         CatanRequest UndoRequest { get; set; }
         LogType LogType { get; set; }
+        string TypeName { get; set; }
 
 
     }
 
-    
-    
+   /// <summary>
+   ///  This is the class that we send to the service to synchronize state.
+   ///  it is Deserialized in the service.
+   ///  
+   ///  JsonElement is a LogHeader of some type
+   ///  TypeName is the name of the derived LogHeader type
+   ///  Sequence is set by the service and is the order of the log it has received
+   ///  
+   /// </summary>
+    public class CatanMessage
+    {
+        public object Data { get; set; }
+        public string TypeName { get; set; } = "";
+        public int Sequence { get; set; } = 0;
+
+    }
+
 
     public class LogHeader : ILogHeader
     {
@@ -83,6 +100,7 @@ namespace Catan.Proxy
         public Guid LogId { get; set; } = Guid.NewGuid();
         public DateTime Time { get; set; } = DateTime.Now;
         public string RequestUrl { get; set; } = "";
+        public string TypeName { get; set; } 
         public CatanRequest UndoRequest { get; set; } = null; // the request to undo this action
         
 
@@ -90,7 +108,7 @@ namespace Catan.Proxy
 
         public LogHeader()
         {
-
+            TypeName = this.GetType().FullName;
 
         }
         public string Serialize()

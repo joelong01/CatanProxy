@@ -151,7 +151,7 @@ namespace Catan.Proxy
             string url = $"{HostName}/api/catan/game/board/{gameName}/{playerName}";
             string json = Serialize(log);
             var obj = await Post<object>(url, json );
-            var logRecord = ParseLogRecord(obj);
+            var logRecord = ParseLogRecord((JsonElement)obj);
 
             return logRecord as RandomBoardLog;
 

@@ -120,7 +120,7 @@ namespace Catan.Proxy
 
     public class RandomBoardLog : LogHeader
     {
-        public object RandomBoardSettings { get; set; } = null;
+        public RandomBoardSettings RandomBoardSettings { get; set; } = null;
         public RandomBoardLog()
         {
             Action = CatanAction.RandomizeBoard;

@@ -44,7 +44,7 @@ namespace Catan.Proxy
             List<LogHeader> records = ParseLogRecords(serviceLogCollection);
             return records;
         }
-
+        // JsonDocument.Parse(json).RootElement.GetProperty("typeName").GetString()
         public Task<T> PostClientLog<T>(string gameName, string playerName, T logEntry)
         {
 
@@ -62,7 +62,7 @@ namespace Catan.Proxy
                 Debug.WriteLine("Post call in SendClientLog failed.");
             }
 
-            return null;
+            return returnTask;
 
         }
 
