@@ -74,7 +74,8 @@ namespace Catan.Proxy
                 else
                 {
                     LastErrorString = json;
-                    LastError = ParseCatanResult(json);
+                    CatanMessage error = CatanProxy.Deserialize<CatanMessage>(json);
+                    LastError = (CatanResult)ParseCatanMessage(error);
                     return default;
                 }
             }
@@ -112,7 +113,8 @@ namespace Catan.Proxy
                     LastErrorString = json;
                     try
                     {
-                        LastError = ParseCatanResult(json);
+                        CatanMessage error = CatanProxy.Deserialize<CatanMessage>(json);
+                        LastError = (CatanResult)ParseCatanMessage(error)  ;
                     }
                     catch { }
                     return default;
@@ -168,7 +170,8 @@ namespace Catan.Proxy
                 LastErrorString = json;
                 try
                 {
-                    LastError = ParseCatanResult(json);
+                    CatanMessage error = CatanProxy.Deserialize<CatanMessage>(json);
+                    LastError = (CatanResult)ParseCatanMessage(error);
                 }
                 catch
                 {
@@ -184,68 +187,7 @@ namespace Catan.Proxy
             return default;
         }
 
-        private List<LogHeader> ParseLogRecords(ServiceLogCollection serviceLogCollection)
-        {
-            List<LogHeader> records = new List<LogHeader>();
-            foreach (var unparsedObject in serviceLogCollection.LogRecords)
-            {
-                var logRecord = ParseLogRecord((JsonElement)(object)unparsedObject);
-                records.Add(logRecord);
-            }
-            return records;
-        }
-
-        private LogHeader ParseLogRecord(JsonElement unparsedObject)
-        {
-            string action = ((JsonElement)unparsedObject).GetProperty("action").GetString();
-            if (String.IsNullOrEmpty(action)) return null;
-            bool ret = Enum.TryParse<CatanAction>(action, out CatanAction catanAction);
-            if (!ret) return null;
-
-            string json = unparsedObject.ToString();
-            switch (catanAction)
-            { 
-                case CatanAction.Purchased:
-                    PurchaseLog purchaseLog = CatanProxy.Deserialize<PurchaseLog>(json);
-                    ParseCatanRequest(purchaseLog.UndoRequest);
-                    return purchaseLog;
-                case CatanAction.GameDeleted:
-                case CatanAction.AddPlayer:
-                case CatanAction.Started:
-                    GameLog gameLog = CatanProxy.Deserialize<GameLog>(json);
-                    return gameLog;
-                case CatanAction.PlayedDevCard:                   
-                    return PlayedDevCardModel.Deserialize(unparsedObject);
-                case CatanAction.PlayerTrade:
-                case CatanAction.TradeGold:
-                case CatanAction.GrantResources:
-                    ResourceLog resourceLog = CatanProxy.Deserialize<ResourceLog>(json);
-                    return resourceLog;
-                case CatanAction.CardTaken:
-                    TakeLog takeLog = CatanProxy.Deserialize<TakeLog>(json);
-                    return takeLog;
-                case CatanAction.MeritimeTrade:
-                    MeritimeTradeLog mtLog = CatanProxy.Deserialize<MeritimeTradeLog>(json);
-                    return mtLog;
-                case CatanAction.ChangedPlayer:
-                    TurnLog tLog = CatanProxy.Deserialize<TurnLog>(json);
-                    return tLog;
-                case CatanAction.RandomizeBoard:
-                    var boardLog = CatanProxy.Deserialize<RandomBoardLog>(json);
-                    boardLog.RandomBoardSettings = CatanProxy.Deserialize<RandomBoardSettings>(boardLog.RandomBoardSettings.ToString()); // more "we don't do polymorphic deserialization
-                    return boardLog;
-                case CatanAction.ChangedState:
-                    var stateChangeLog = CatanProxy.Deserialize<StateChangeLog>(json);
-                    stateChangeLog.LogStateTranstion = CatanProxy.Deserialize<LogStateTranstion>(stateChangeLog.LogStateTranstion.ToString());
-                    return stateChangeLog;
-
-                case CatanAction.GameCreated:
-                case CatanAction.Undefined:
-                case CatanAction.TradeResources:
-                default:
-                    throw new Exception($"{catanAction} has no Deserializer! logEntry: {unparsedObject}");
-            }
-        }
+       
 
         public void CancelAllRequests()
         {
@@ -257,41 +199,9 @@ namespace Catan.Proxy
             Client.Dispose();
         }
 
-        private CatanResult ParseCatanResult(string json)
-        {
-            if (String.IsNullOrEmpty(json)) return null;
+       
 
-            var result = CatanProxy.Deserialize<CatanResult>(json);
-            ParseCatanRequest(result.CantanRequest);
-
-            return result;
-        }
-
-        /// <summary>
-        ///     System.Text.Json does not do polymorphic Deserialization. So we serialize the object and its type.  here 
-        ///     we switch on the type and then covert the JSON returned by ASP.net to string and then deserialize it into the 
-        ///     right type.
-        /// </summary>
-        /// <param name="unparsedRequest"></param>
-        private void ParseCatanRequest(CatanRequest unparsedRequest)
-        {
-            if (unparsedRequest == null) return;
-            switch (unparsedRequest.BodyType)
-            {
-                case BodyType.TradeResources:
-                    unparsedRequest.Body = CatanProxy.Deserialize<TradeResources>(unparsedRequest.Body.ToString());
-                    break;
-                case BodyType.GameInfo:
-                    unparsedRequest.Body = CatanProxy.Deserialize<GameInfo>(unparsedRequest.Body.ToString());
-                    break;
-                case BodyType.TradeResourcesList:
-                    unparsedRequest.Body = CatanProxy.Deserialize<TradeResources[]>(unparsedRequest.Body.ToString());
-                    break;
-                case BodyType.None:
-                default:
-                    break;
-            }
-        }
+       
         public static JsonSerializerOptions GetJsonOptions(bool indented = false)
         {
             var options = new JsonSerializerOptions
@@ -318,70 +228,6 @@ namespace Catan.Proxy
             options.Converters.Add(new JsonStringEnumConverter());
             return JsonSerializer.Deserialize<T>(json, options);
         }
-        static public LogHeader DeserializeLogHeader(string json)
-        {
-            LogHeader logHeader = Deserialize<LogHeader>(json);
-            if (logHeader == null) return null;
-            switch (logHeader.Action)
-            {
-                case CatanAction.Rolled:
-                    break;
-                case CatanAction.ChangedState:
-                    break;
-                case CatanAction.ChangedPlayer:
-                    break;
-                case CatanAction.Dealt:
-                    break;
-                case CatanAction.CardsLost:
-                    break;
-                case CatanAction.CardsLostToSeven:
-                    break;
-                case CatanAction.MissedOpportunity:
-                    break;
-                case CatanAction.DoneSupplemental:
-                    break;
-                case CatanAction.DoneResourceAllocation:
-                    break;
-                case CatanAction.RolledSeven:
-                    break;
-                case CatanAction.AssignedBaron:
-                    break;
-                case CatanAction.UpdatedRoadState:
-                    break;
-                case CatanAction.UpdateBuildingState:
-                    break;
-                case CatanAction.AssignedPirateShip:
-                    break;
-                case CatanAction.AddPlayer:
-                    return CatanProxy.Deserialize<AddPlayerModel>(json);
-
-                case CatanAction.SelectGame:
-                    break;
-                case CatanAction.InitialAssignBaron:
-                    break;
-                case CatanAction.None:
-                    break;
-                case CatanAction.SetFirstPlayer:
-                    break;
-                case CatanAction.RoadTrackingChanged:
-                    break;
-                case CatanAction.AddResourceCount:
-                    break;
-                case CatanAction.ChangedPlayerProperty:
-                    break;
-                case CatanAction.SetRandomTileToGold:
-                    break;
-                case CatanAction.ChangePlayerAndSetState:
-                    break;
-                case CatanAction.Started:
-                    break;
-                case CatanAction.RandomizeBoard:
-                    break;
-                default:
-                    break;
-            }
-
-            return null;
-        }
+     
     }
 }

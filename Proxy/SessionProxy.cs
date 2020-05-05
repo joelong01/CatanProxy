@@ -25,7 +25,7 @@ namespace Catan.Proxy
             return Post<List<string>>(url, null);
 
         }
-        public Task<string> CreateSession(string sessionId, string description)
+        public Task<List<SessionId>> CreateSession(string sessionId, string description)
         {
             if (String.IsNullOrEmpty(sessionId) || String.IsNullOrEmpty(description))
             {
@@ -34,12 +34,23 @@ namespace Catan.Proxy
 
             string url = $"{HostName}/api/catan/session/{sessionId}/{description}";
 
-            return Post<string>(url, null);
+            return Post<List<SessionId>>(url, null);
         }
-        public Task<List<string>> GetSessions()
+        public Task<List<SessionId>> DeleteSession(string sessionId)
+        {
+            if (String.IsNullOrEmpty(sessionId) )
+            {
+                throw new ArgumentException("sessionId and description can't be null or empty");
+            }
+
+            string url = $"{HostName}/api/catan/session/{sessionId}";
+
+            return Delete<List<SessionId>>(url);
+        }
+        public Task<List<SessionId>> GetSessions()
         {
             string url = $"{HostName}/api/catan/session";
-            return Get<List<string>>(url);
+            return Get<List<SessionId>>(url);
         }
         public Task<List<string>> GetPlayers(string sessionId)
         {
@@ -52,7 +63,7 @@ namespace Catan.Proxy
             return Get<List<string>>(url);
 
         }
-        public async Task<CatanMessage> PostLogMessage<T>(string sessionName, LogHeader logHeader)
+        public async Task<CatanMessage> PostLogMessage(string sessionName, object logHeader)
         {
             if (String.IsNullOrEmpty(sessionName))
             {
@@ -67,7 +78,7 @@ namespace Catan.Proxy
             CatanMessage message = new CatanMessage()
             {
                 TypeName = logHeader.GetType().FullName,
-                Data = logHeader as object
+                Data = logHeader
             };
             
             CatanMessage returnedMessage = await Post<CatanMessage>(url, CatanProxy.Serialize(message));
@@ -92,11 +103,11 @@ namespace Catan.Proxy
             
             return messageList;
         }
-        private LogHeader ParseCatanMessage(CatanMessage message)
+        private object ParseCatanMessage(CatanMessage message)
         {
             Type type = Type.GetType(message.TypeName);
             if (type == null) throw new ArgumentException("Unknown type!");
-            return JsonSerializer.Deserialize(message.Data.ToString(), type, GetJsonOptions()) as LogHeader;
+            return JsonSerializer.Deserialize(message.Data.ToString(), type, GetJsonOptions()) as object;
         }
       
     }
