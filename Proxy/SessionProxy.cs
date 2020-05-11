@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -9,11 +10,12 @@ namespace Catan.Proxy
     public partial class CatanProxy : IDisposable
     {
         public object JsonConvert { get; private set; }
+        private static Assembly CurrentAssembly { get; } = Assembly.GetExecutingAssembly();
 
         /// <summary>
         ///     Joing a session and return a list of player names
         /// </summary>
-        public Task<List<string>> JoinSession(string sessionId, string playerName)
+        public Task<SessionInfo> JoinSession(string sessionId, string playerName)
         {
 
             if (String.IsNullOrEmpty(sessionId) || String.IsNullOrEmpty(playerName))
@@ -22,21 +24,25 @@ namespace Catan.Proxy
             }
             string url = $"{HostName}/api/catan/session/join/{sessionId}/{playerName}";
 
-            return Post<List<string>>(url, null);
+            return Post<SessionInfo>(url, null);
 
         }
-        public Task<List<SessionId>> CreateSession(string sessionId, string description)
+        public Task<List<SessionInfo>> CreateSession(SessionInfo sessionInfo)
         {
-            if (String.IsNullOrEmpty(sessionId) || String.IsNullOrEmpty(description))
+            if (sessionInfo == null)
+            {
+                throw new ArgumentException("SessionInfo can't be null");
+            }
+            if (String.IsNullOrEmpty(sessionInfo.Creator) || String.IsNullOrEmpty(sessionInfo.Description) || String.IsNullOrEmpty(sessionInfo.Id))
             {
                 throw new ArgumentException("sessionId and description can't be null or empty");
             }
 
-            string url = $"{HostName}/api/catan/session/{sessionId}/{description}";
+            string url = $"{HostName}/api/catan/session/";
 
-            return Post<List<SessionId>>(url, null);
+            return Post<List<SessionInfo>>(url, Serialize(sessionInfo));
         }
-        public Task<List<SessionId>> DeleteSession(string sessionId)
+        public Task<List<SessionInfo>> DeleteSession(string sessionId)
         {
             if (String.IsNullOrEmpty(sessionId) )
             {
@@ -45,12 +51,12 @@ namespace Catan.Proxy
 
             string url = $"{HostName}/api/catan/session/{sessionId}";
 
-            return Delete<List<SessionId>>(url);
+            return Delete<List<SessionInfo>>(url);
         }
-        public Task<List<SessionId>> GetSessions()
+        public Task<List<SessionInfo>> GetSessions()
         {
             string url = $"{HostName}/api/catan/session";
-            return Get<List<SessionId>>(url);
+            return Get<List<SessionInfo>>(url);
         }
         public Task<List<string>> GetPlayers(string sessionId)
         {
@@ -63,30 +69,37 @@ namespace Catan.Proxy
             return Get<List<string>>(url);
 
         }
-        public async Task<CatanMessage> PostLogMessage(string sessionName, object logHeader)
+        public async Task<bool> PostLogMessage(string sessionName, CatanMessage message)
         {
             if (String.IsNullOrEmpty(sessionName))
             {
                 throw new ArgumentException("names can't be null or empty");
             }
-            if (logHeader == null)
+            if (message == null || message.Data == null)
             {
                 throw new ArgumentException("LogHeader cannot be null");
             }
 
-            string url = $"{HostName}/api/catan/session/message/{sessionName}";
-            CatanMessage message = new CatanMessage()
+            if (String.IsNullOrEmpty(message.TypeName))
             {
-                TypeName = logHeader.GetType().FullName,
-                Data = logHeader
-            };
+                message.TypeName = message.Data.GetType().FullName;
+            }
+
+            string url = $"{HostName}/api/catan/session/message/{sessionName}";
+         
             
             CatanMessage returnedMessage = await Post<CatanMessage>(url, CatanProxy.Serialize(message));
-            returnedMessage.Data = ParseCatanMessage(returnedMessage);
-            return returnedMessage;
-
+            return (returnedMessage != null);
+           
         }
-        public async Task<List<CatanMessage>> GetLogs(string gameName, string playerName)
+        /// <summary>
+        ///     does a hanging Get for the Logs from the service
+        ///     NOTE:  the .Data property is not Deserialized from JsonElement because the nuget package won't have the right types.
+        /// </summary>
+        /// <param name="gameName"></param>
+        /// <param name="playerName"></param>
+        /// <returns></returns>
+        public async Task<List<CatanMessage>> Monitor(string gameName, string playerName)
         {
             if (String.IsNullOrEmpty(gameName))
             {
@@ -96,16 +109,25 @@ namespace Catan.Proxy
             string json = await Get<string>(url);
 
             List<CatanMessage> messageList = JsonSerializer.Deserialize(json, typeof(List<CatanMessage>), GetJsonOptions()) as List<CatanMessage>;
-            foreach (CatanMessage message in messageList)
-            {
-                message.Data = ParseCatanMessage(message);
-            }
-            
             return messageList;
         }
+
+         public async Task<List<CatanMessage>> GetAllLogRecords(string gameName, string playerName)
+        {
+            if (String.IsNullOrEmpty(gameName))
+            {
+                throw new ArgumentException("names can't be null or empty");
+            }
+            string url = $"{HostName}/api/catan/session/game/{gameName}/{playerName}";
+            string json = await Get<string>(url);
+
+            List<CatanMessage> messageList = JsonSerializer.Deserialize(json, typeof(List<CatanMessage>), GetJsonOptions()) as List<CatanMessage>;
+            return messageList;
+        }
+
         private object ParseCatanMessage(CatanMessage message)
         {
-            Type type = Type.GetType(message.TypeName);
+            Type type = CurrentAssembly.GetType(message.TypeName);
             if (type == null) throw new ArgumentException("Unknown type!");
             return JsonSerializer.Deserialize(message.Data.ToString(), type, GetJsonOptions()) as object;
         }

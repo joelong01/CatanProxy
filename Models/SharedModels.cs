@@ -7,11 +7,13 @@ using System;
 
 namespace Catan.Proxy
 {
-    public class SessionId
+    public class SessionInfo
     {
         public string Description { get; set; }
         public string Id { get; set; }
+        public string Creator { get; set; }
     }
+    
     public enum CatanError
     {
         DevCardsSoldOut,
@@ -38,16 +40,30 @@ namespace Catan.Proxy
     ///  This is the class that we send to the service to synchronize state.
     ///  it is Deserialized in the service.
     ///  
-    ///  JsonElement is a LogHeader of some type
+    ///  Data is a LogHeader of some type
     ///  TypeName is the name of the derived LogHeader type
     ///  Sequence is set by the service and is the order of the log it has received
     ///  
     /// </summary>
     public class CatanMessage
     {
-        public object Data { get; set; }
+        private object _data;
+        
+
+        public object Data
+        {
+            get => _data;
+            set
+            {
+                _data = value;
+                TypeName = value.GetType().FullName;
+            }
+        }
         public string TypeName { get; set; } = "";
         public int Sequence { get; set; } = 0;
+        public string Origin { get; set; } = "";
+
+        public CatanMessage() { }
 
     }
 
@@ -55,7 +71,7 @@ namespace Catan.Proxy
     {
         public string Url { get; set; } = "";
         public object Body { get; set; } = null;
-       
+
         public CatanRequest() { }
         public CatanRequest(string u, object b) { Url = u; Body = b; }
         public override string ToString()
