@@ -1,19 +1,11 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
-using System;
-
 
 namespace Catan.Proxy
 {
-    public class SessionInfo
-    {
-        public string Description { get; set; }
-        public string Id { get; set; }
-        public string Creator { get; set; }
-    }
-    
+    public enum ActionType { Normal, Undo, Redo, Replay };
+
     public enum CatanError
     {
         DevCardsSoldOut,
@@ -36,19 +28,30 @@ namespace Catan.Proxy
         NoError,
     }
 
+    public enum MessageType { BroadcastMessage, PrivateMessage, CreateGame, DeleteGame, JoinGame, LeaveGame, Ack };
+
     /// <summary>
     ///  This is the class that we send to the service to synchronize state.
     ///  it is Deserialized in the service.
-    ///  
+    ///
     ///  Data is a LogHeader of some type
-    ///  TypeName is the name of the derived LogHeader type
+    ///  DataTypeName is the name of the derived LogHeader type
     ///  Sequence is set by the service and is the order of the log it has received
-    ///  
+    ///  Origin is the PlayerName that created the message
+    ///  CatanMessageType is the obvious
+    ///
     /// </summary>
     public class CatanMessage
     {
+        #region Delegates + Fields + Events + Enums
+
         private object _data;
-        
+
+        #endregion Delegates + Fields + Events + Enums
+
+        #region Properties
+
+        public ActionType ActionType { get; set; } = ActionType.Normal;
 
         public object Data
         {
@@ -56,34 +59,78 @@ namespace Catan.Proxy
             set
             {
                 _data = value;
-                TypeName = value.GetType().FullName;
+                DataTypeName = value.GetType().FullName;
             }
         }
-        public string TypeName { get; set; } = "";
+
+        public string DataTypeName { get; set; } = "";
+        public string From { get; set; } = "";
+        public MessageType MessageType { get; set; }
         public int Sequence { get; set; } = 0;
-        public string Origin { get; set; } = "";
+        public string To { get; set; } = "*";
 
-        public CatanMessage() { }
+        #endregion Properties
 
+        #region Constructors + Destructors
+
+        public CatanMessage()
+        {
+        }
+
+        #endregion Constructors + Destructors
+
+        #region Methods
+
+        public override string ToString()
+        {
+            return $"[Origin={From}][Type={DataTypeName}][Sequence={Sequence}]";
+        }
+
+        #endregion Methods
     }
 
     public class CatanRequest
     {
-        public string Url { get; set; } = "";
-        public object Body { get; set; } = null;
+        #region Properties
 
-        public CatanRequest() { }
-        public CatanRequest(string u, object b) { Url = u; Body = b; }
+        public object Body { get; set; } = null;
+        public string Url { get; set; } = "";
+
+        #endregion Properties
+
+        #region Constructors + Destructors
+
+        public CatanRequest()
+        {
+        }
+
+        public CatanRequest(string u, object b)
+        {
+            Url = u; Body = b;
+        }
+
+        #endregion Constructors + Destructors
+
+        #region Methods
+
         public override string ToString()
         {
             return $"[Url={Url}][Body={Body?.ToString()}]";
         }
+
+        #endregion Methods
     }
 
     public class CatanResult
     {
+        #region Delegates + Fields + Events + Enums
+
         private CatanRequest _request = new CatanRequest();
         private string request;
+
+        #endregion Delegates + Fields + Events + Enums
+
+        #region Properties
 
         public CatanRequest CantanRequest
         {
@@ -100,19 +147,24 @@ namespace Catan.Proxy
             }
         }
 
-        public List<KeyValuePair<string, object>> ExtendedInformation { get; } = new List<KeyValuePair<string, object>>();
         public string Description { get; set; }
-        public string FunctionName { get; set; }
-        public string FilePath { get; set; }
-        public int LineNumber { get; set; }
-        public DateTime Time { get; set; } = DateTime.Now;
-        public string Request { get => _request.Url; set => request = value; }
-        public Guid ID { get; set; } = Guid.NewGuid(); // this gives us an ID at creation time that survives serialization and is globally unique
         public CatanError Error { get; set; } = CatanError.Unknown;
+        public List<KeyValuePair<string, object>> ExtendedInformation { get; } = new List<KeyValuePair<string, object>>();
+        public string FilePath { get; set; }
+        public string FunctionName { get; set; }
+        public Guid ID { get; set; } = Guid.NewGuid();
+        public int LineNumber { get; set; }
+        public string Request { get => _request.Url; set => request = value; }
+        public DateTime Time { get; set; } = DateTime.Now;
+        // this gives us an ID at creation time that survives serialization and is globally unique
         public string Version { get; set; } = "2.0";
+
+        #endregion Properties
+
+        #region Constructors + Destructors
+
         public CatanResult() // for the Serializer
         {
-
         }
 
         public CatanResult(CatanError error, [CallerMemberName] string fName = "", [CallerFilePath] string codeFile = "", [CallerLineNumber] int lineNumber = -1)
@@ -122,6 +174,16 @@ namespace Catan.Proxy
             FilePath = codeFile;
             LineNumber = lineNumber;
         }
+
+        #endregion Constructors + Destructors
+
+        #region Methods
+
+        public static bool operator !=(CatanResult a, CatanResult b)
+        {
+            return !(a == b);
+        }
+
         public static bool operator ==(CatanResult a, CatanResult b)
         {
             if (a is null || b is null)
@@ -162,8 +224,13 @@ namespace Catan.Proxy
                     a.Request == b.Request &&
                     a.Error == b.Error
                  );
-
         }
+
+        public override bool Equals(object obj)
+        {
+            return (CatanResult)obj == this;
+        }
+
         public override int GetHashCode()
         {
             int hash = 17;
@@ -175,14 +242,57 @@ namespace Catan.Proxy
             hash = hash * 97 + Error.GetHashCode();
             return hash;
         }
-        public static bool operator !=(CatanResult a, CatanResult b)
-        {
-            return !(a == b);
-        }
-        public override bool Equals(object obj)
-        {
-            return (CatanResult)obj == this;
-        }
+
+        #endregion Methods
     }
 
+    public class CatanServiceMessage
+    {
+        #region Properties
+
+        public GameInfo GameInfo { get; set; }
+        public string PlayerName { get; set; }
+
+        #endregion Properties
+    }
+
+    public class GameInfo
+    {
+        #region Properties
+
+        /// <summary>
+        ///    the name of the player that created the game
+        /// </summary>
+        public string Creator { get; set; }
+
+        /// <summary>
+        ///    A unique id for a game
+        /// </summary>
+        public Guid Id { get; set; }
+
+        /// <summary>
+        ///     User picked name of the game
+        /// </summary>
+        public string Name { get; set; }
+        /// <summary>
+        ///    should clients listening for game changes autojoin this game?
+        /// </summary>
+        public bool RequestAutoJoin { get; set; } = false;
+
+        /// <summary>
+        ///    has the game been "started"
+        /// </summary>
+        public bool Started { get; set; }
+
+        #endregion Properties
+
+        #region Methods
+
+        public override string ToString()
+        {
+            return $"[Creator={Creator}][AutoJoin={RequestAutoJoin}][Name={Name}][Id={Id}]";
+        }
+
+        #endregion Methods
+    }
 }
