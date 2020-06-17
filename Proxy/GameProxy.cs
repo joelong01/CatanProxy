@@ -138,6 +138,20 @@ namespace Catan.Proxy
             return messageList;
         }
 
+        public  async Task<bool> KeepAlive()
+        {
+            try
+            {
+                string url = $"{HostName}/api/catan/game/keepalive";
+                var response = await Client.GetAsync(url, _cts.Token);
+                return response.IsSuccessStatusCode;                   
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>
         ///     does a hanging Get for changes to Games
         /// </summary>

@@ -50,8 +50,15 @@ namespace Catan.Proxy
         #endregion Delegates + Fields + Events + Enums
 
         #region Properties
-
+        public int Sequence { get; set; } = 0;
         public ActionType ActionType { get; set; } = ActionType.Normal;
+
+       
+        public string From { get; set; } = "";
+        
+        public string To { get; set; } = "*";
+        public string DataTypeName { get; set; } = "";
+        public MessageType MessageType { get; set; }
 
         public object Data
         {
@@ -59,15 +66,11 @@ namespace Catan.Proxy
             set
             {
                 _data = value;
-                DataTypeName = value.GetType().FullName;
+                
             }
         }
 
-        public string DataTypeName { get; set; } = "";
-        public string From { get; set; } = "";
-        public MessageType MessageType { get; set; }
-        public int Sequence { get; set; } = 0;
-        public string To { get; set; } = "*";
+        
 
         #endregion Properties
 

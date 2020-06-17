@@ -6,8 +6,8 @@ namespace Catan.Proxy
     {
         public CatanWsMessageType MessageType { get; set; }
         public string DataType { get; set; }
-        public object Data { get; set; }
         public int Sequence { get; set; }
+        public object Data { get; set; }
         public override string ToString()
         {
             return $"[MessageType={MessageType}][DataType={DataType}][Sequence={Sequence}][Data={Data}]";
