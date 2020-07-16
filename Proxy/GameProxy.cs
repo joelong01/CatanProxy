@@ -144,7 +144,8 @@ namespace Catan.Proxy
             {
                 string url = $"{HostName}/api/catan/game/keepalive";
                 var response = await Client.GetAsync(url, _cts.Token);
-                return response.IsSuccessStatusCode;                   
+                return response.IsSuccessStatusCode;
+                   
             }
             catch
             {

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Catan.Proxy
 {
-    public enum ActionType { Normal, Undo, Redo, Replay };
+    public enum ActionType { Normal, Undo, Redo, Replay, Retry };
 
     public enum CatanError
     {
@@ -51,14 +51,17 @@ namespace Catan.Proxy
 
         #region Properties
         public int Sequence { get; set; } = 0;
+        public Guid MessageId { get; set; } = Guid.NewGuid();
+        
         public ActionType ActionType { get; set; } = ActionType.Normal;
+        public MessageType MessageType { get; set; }
 
-       
         public string From { get; set; } = "";
         
         public string To { get; set; } = "*";
         public string DataTypeName { get; set; } = "";
-        public MessageType MessageType { get; set; }
+
+        public GameInfo GameInfo { get; set; } = null;
 
         public object Data
         {
@@ -286,6 +289,13 @@ namespace Catan.Proxy
         ///    has the game been "started"
         /// </summary>
         public bool Started { get; set; }
+
+        /// <summary>
+        ///     the Index of the game type
+        /// </summary>
+        /// <returns></returns>
+        /// 
+        public int GameIndex { get; set; }
 
         #endregion Properties
 
