@@ -89,7 +89,7 @@ namespace Catan.Proxy
 
         public override string ToString()
         {
-            return $"[Origin={From}][Type={DataTypeName}][Sequence={Sequence}]";
+            return $"[Type={MessageType}][Sequence={Sequence}][Origin={From}][DataType={DataTypeName}]";
         }
 
         #endregion Methods
